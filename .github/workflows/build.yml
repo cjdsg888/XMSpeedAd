@@ -1,9 +1,7 @@
 name: Build XMSpeedAd
 
-# 触发条件: 推送任意分支 / 手动点击运行
 on:
   push:
-    branches: ["**"]
   workflow_dispatch:
 
 jobs:

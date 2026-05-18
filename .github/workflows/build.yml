@@ -33,7 +33,8 @@ jobs:
                 -Wl,-framework,AVFoundation \
                 -Wl,-framework,Foundation \
                 -Wl,-framework,CoreMedia \
-                -Wl,-framework,CoreGraphics
+                -Wl,-framework,CoreGraphics \
+                -L "$SDK_DIR/usr/lib" -lSystem
           echo "=== Compile OK ==="
           file XMSpeedAd.dylib
 

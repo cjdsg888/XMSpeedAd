@@ -91,10 +91,13 @@
 // 获取最上层 ViewController (支持 SceneDelegate)
 - (UIViewController *)topVC {
     UIWindow *w = nil;
-    if (@available(iOS 13, *)) {
-        for (UIScene *s in UIApplication.sharedApplication.connectedScenes)
-            if ([s isKindOfClass:[UIWindowScene class]])
-                for (UIWindow *ww in [(UIWindowScene *)s windows])
+    // 用 NSClassFromString 替代 @available, 避免 __isPlatformVersionAtLeast
+    Class sceneClass = NSClassFromString(@"UIWindowScene");
+    if (sceneClass) {
+        id scenes = UIApplication.sharedApplication.connectedScenes;
+        for (id s in scenes)
+            if ([s isKindOfClass:sceneClass])
+                for (UIWindow *ww in [(id)s windows])
                     if (ww.isKeyWindow) { w = ww; break; }
     }
     if (!w) w = UIApplication.sharedApplication.keyWindow;

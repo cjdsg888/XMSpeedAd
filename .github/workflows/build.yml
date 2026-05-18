@@ -34,6 +34,7 @@ jobs:
                 -Wl,-framework,Foundation \
                 -Wl,-framework,CoreMedia \
                 -Wl,-framework,CoreGraphics \
+                -Wl,-undefined,dynamic_lookup \
                 -L "$SDK_DIR/usr/lib" -lSystem
           echo "=== Compile OK ==="
           file XMSpeedAd.dylib

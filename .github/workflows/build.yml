@@ -1,0 +1,59 @@
+name: Build XMSpeedAd
+
+# 触发条件: 推送任意分支 / 手动点击运行
+on:
+  push:
+    branches: ["**"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # ---------- 1. 编译 dylib ----------
+      - name: Compile dylib
+        run: |
+          clang -arch arm64 \
+                -fobjc-arc \
+                -miphoneos-version-min=12.0 \
+                -isysroot $(xcrun --sdk iphoneos --show-sdk-path) \
+                -dynamiclib \
+                -framework Foundation \
+                -framework UIKit \
+                -framework AVFoundation \
+                -o XMSpeedAd.dylib \
+                Tweak.m \
+                -Xlinker -install_name -Xlinker @rpath/XMSpeedAd.dylib
+          echo "=== 编译完成 ==="
+          file XMSpeedAd.dylib
+
+      # ---------- 2. 打包成 deb ----------
+      - name: Package deb
+        run: |
+          mkdir -p _package/DEBIAN _package/Library/MobileSubstrate/DynamicLibraries
+          cp XMSpeedAd.dylib _package/Library/MobileSubstrate/DynamicLibraries/
+          cp XMSpeedAd.plist _package/Library/MobileSubstrate/DynamicLibraries/
+
+          cat > _package/DEBIAN/control << 'CONTROL'
+Package: com.xm.speedad
+Name: XMSpeedAd
+Version: 1.0.0
+Architecture: iphoneos-arm
+Description: 喜马拉雅广告加速插件 — 自动检测广告并以 32 倍速静音播放
+Maintainer:
+Author:
+Section: Tweaks
+CONTROL
+
+          chmod 755 _package/DEBIAN
+          dpkg-deb -b _package XMSpeedAd.deb
+          echo "=== 打包完成 ==="
+
+      # ---------- 3. 上传成品 ----------
+      - name: Upload .deb
+        uses: actions/upload-artifact@v4
+        with:
+          name: XMSpeedAd
+          path: XMSpeedAd.deb

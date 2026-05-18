@@ -1,0 +1,9 @@
+Package: com.xm.speedad
+Name: XMSpeedAd
+Version: 1.0.0
+Architecture: iphoneos-arm
+Description: 喜马拉雅广告加速插件 — 检测到广告时自动 32 倍速静音播放
+Maintainer:
+Author:
+Section: Tweaks
+Depends: mobilesubstrate (>= 0.9.5000)

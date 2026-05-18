@@ -3,47 +3,25 @@ on: [push, workflow_dispatch]
 
 jobs:
   build:
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Compile dylib
+      - name: Install Theos + iOS SDK
         run: |
-          clang -arch arm64 \
-                -fobjc-arc \
-                -miphoneos-version-min=12.0 \
-                -isysroot $(xcrun --sdk iphoneos --show-sdk-path) \
-                -dynamiclib \
-                -framework Foundation \
-                -framework UIKit \
-                -framework AVFoundation \
-                -o XMSpeedAd.dylib \
-                Tweak.m \
-                -Xlinker -install_name -Xlinker @rpath/XMSpeedAd.dylib
-          echo "=== done ==="
-          file XMSpeedAd.dylib
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq curl xz-utils
+          git clone --recursive --depth=1 https://github.com/theos/theos.git /tmp/theos
+          SDK_URL=https://github.com/theos/sdks/releases/latest/download/iPhoneOS16.5.sdk.tar.xz
+          curl -sL -o /tmp/sdk.tar.xz "$SDK_URL"
+          mkdir -p /tmp/theos/sdks
+          tar xf /tmp/sdk.tar.xz -C /tmp/theos/sdks
+          echo "THEOS=/tmp/theos" >> $GITHUB_ENV
 
-      - name: Package deb
-        run: |
-          mkdir -p _package/DEBIAN _package/Library/MobileSubstrate/DynamicLibraries
-          cp XMSpeedAd.dylib _package/Library/MobileSubstrate/DynamicLibraries/
-          cp XMSpeedAd.plist _package/Library/MobileSubstrate/DynamicLibraries/
-          cat > _package/DEBIAN/control << 'CONTROL'
-Package: com.xm.speedad
-Name: XMSpeedAd
-Version: 1.0.0
-Architecture: iphoneos-arm
-Description: 喜马拉雅广告加速插件
-Maintainer:
-Author:
-Section: Tweaks
-CONTROL
-          chmod 755 _package/DEBIAN
-          dpkg-deb -b _package XMSpeedAd.deb
-          echo "=== done ==="
+      - name: Build with Theos
+        run: make clean package
 
-      - name: Upload .deb
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: XMSpeedAd
-          path: XMSpeedAd.deb
+          path: packages/*.deb

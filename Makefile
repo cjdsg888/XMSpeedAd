@@ -1,49 +1,52 @@
-# ======================================================================
-# XMSpeedAd — 喜马拉雅广告加速插件
-#
-# 编译方式:
-#   方式 1: GitHub Actions (推荐, 无需本地环境)
-#   方式 2: macOS 本地直接编译  →  make
-#   方式 3: Theos 编译          →  make theos
-# ======================================================================
+# ============================================================================
+# XMSpeedAd — Makefile
+# 自动检测: 设了 $THEOS 就用 Theos 编译, 否则用 macOS Xcode 直接编译
+# ============================================================================
 
+# ---- Theos 编译 (Linux/macOS, 需要 THEOS 环境变量) ----
+ifneq ($(THEOS),)
+TARGET      := iphone:clang:latest:12.0
+ARCHS       := arm64
+DEBUG       := 0
+PACKAGE_VERSION = 1.0.0
+
+include $(THEOS)/makefiles/common.mk
+
+TWEAK_NAME           = XMSpeedAd
+XMSpeedAd_FILES      = Tweak.m
+XMSpeedAd_CFLAGS     = -fobjc-arc
+XMSpeedAd_FRAMEWORKS = Foundation UIKit AVFoundation
+
+include $(THEOS_MAKE_PATH)/tweak.mk
+
+# ---- 直接编译 (macOS + Xcode, 无需 Theos) ----
+else
 ARCH   ?= arm64
 MIN_IOS ?= 12.0
-
-# 查找 iOS SDK (需要 Xcode)
-SDK ?= $(shell xcrun --sdk iphoneos --show-sdk-path 2>/dev/null)
-
-# ---- 直接编译 (macOS + Xcode 即可, 无需 Theos) ----
+SDK    ?= $(shell xcrun --sdk iphoneos --show-sdk-path 2>/dev/null)
 
 XMSpeedAd.dylib: Tweak.m
-	clang -arch $(ARCH) \
-	      -fobjc-arc \
-	      -miphoneos-version-min=$(MIN_IOS) \
-	      -isysroot $(SDK) \
-	      -dynamiclib \
-	      -framework Foundation \
-	      -framework UIKit \
-	      -framework AVFoundation \
-	      -o $@ $< \
-	      -Xlinker -install_name -Xlinker @rpath/$@
+	@if [ -z "$(SDK)" ]; then echo "Error: Xcode not found (no SDK)"; exit 1; fi
+	clang -arch $(ARCH) -fobjc-arc -miphoneos-version-min=$(MIN_IOS) \
+		-isysroot $(SDK) \
+		-dynamiclib \
+		-framework Foundation -framework UIKit -framework AVFoundation \
+		-o $@ $< \
+		-Xlinker -install_name -Xlinker @rpath/$@
 
 all: XMSpeedAd.dylib
 
-# 编译并打包成 .deb
 deb: XMSpeedAd.dylib
 	mkdir -p _package/DEBIAN _package/Library/MobileSubstrate/DynamicLibraries
-	cp XMSpeedAd.dylib   _package/Library/MobileSubstrate/DynamicLibraries/
-	cp XMSpeedAd.plist   _package/Library/MobileSubstrate/DynamicLibraries/
-	cp control           _package/DEBIAN/control
+	cp XMSpeedAd.dylib _package/Library/MobileSubstrate/DynamicLibraries/
+	cp XMSpeedAd.plist _package/Library/MobileSubstrate/DynamicLibraries/
+	cp control _package/DEBIAN/control
+	chmod 755 _package/DEBIAN
 	dpkg-deb -b _package XMSpeedAd.deb
 	rm -rf _package
-	@echo "=== 打包完成: XMSpeedAd.deb ==="
-
-# Theos 编译 (需要安装 THEOS)
-theos:
-	@echo "使用 Theos 编译: make clean && make package"
 
 clean:
 	rm -rf XMSpeedAd.dylib XMSpeedAd.deb _package
 
-.PHONY: all deb theos clean
+.PHONY: all deb clean
+endif

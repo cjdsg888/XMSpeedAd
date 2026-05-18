@@ -29,7 +29,11 @@ jobs:
                 -o XMSpeedAd.dylib \
                 Tweak.m \
                 -Xlinker -install_name -Xlinker @rpath/XMSpeedAd.dylib \
-                -Wno-objc-weak-compat
+                -Wl,-framework,UIKit \
+                -Wl,-framework,AVFoundation \
+                -Wl,-framework,Foundation \
+                -Wl,-framework,CoreMedia \
+                -Wl,-framework,CoreGraphics
           echo "=== Compile OK ==="
           file XMSpeedAd.dylib
 

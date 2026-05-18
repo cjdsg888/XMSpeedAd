@@ -10,7 +10,7 @@ jobs:
       - name: Install clang + download iOS SDK
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq clang
+          sudo apt-get install -y -qq clang lld
           # 下载 iOS SDK (来自 theos/sdks, 包含头文件和 stub 库)
           SDK_URL=https://github.com/theos/sdks/releases/latest/download/iPhoneOS16.5.sdk.tar.xz
           curl -sL -o /tmp/ios-sdk.tar.xz "$SDK_URL"
@@ -22,12 +22,14 @@ jobs:
         run: |
           clang --target=arm64-apple-ios12.0 \
                 -fobjc-arc \
+                -fuse-ld=lld \
                 -isysroot "$SDK_DIR" \
                 -F "$SDK_DIR/System/Library/Frameworks" \
                 -dynamiclib \
                 -o XMSpeedAd.dylib \
                 Tweak.m \
-                -Xlinker -install_name -Xlinker @rpath/XMSpeedAd.dylib
+                -Xlinker -install_name -Xlinker @rpath/XMSpeedAd.dylib \
+                -Wno-objc-weak-compat
           echo "=== Compile OK ==="
           file XMSpeedAd.dylib
 

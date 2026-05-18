@@ -7,21 +7,41 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Theos + iOS SDK
+      - name: Install clang + download iOS SDK
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq curl xz-utils
-          git clone --recursive --depth=1 https://github.com/theos/theos.git /tmp/theos
+          sudo apt-get install -y -qq clang
+          # 下载 iOS SDK (来自 theos/sdks, 包含头文件和 stub 库)
           SDK_URL=https://github.com/theos/sdks/releases/latest/download/iPhoneOS16.5.sdk.tar.xz
-          curl -sL -o /tmp/sdk.tar.xz "$SDK_URL"
-          mkdir -p /tmp/theos/sdks
-          tar xf /tmp/sdk.tar.xz -C /tmp/theos/sdks
-          echo "THEOS=/tmp/theos" >> $GITHUB_ENV
+          curl -sL -o /tmp/ios-sdk.tar.xz "$SDK_URL"
+          sudo mkdir -p /opt/iphoneos
+          sudo tar xf /tmp/ios-sdk.tar.xz -C /opt/iphoneos
+          echo "SDK_DIR=/opt/iphoneos/iPhoneOS16.5.sdk" >> $GITHUB_ENV
 
-      - name: Build with Theos
-        run: make clean package
+      - name: Compile dylib
+        run: |
+          clang --target=arm64-apple-ios12.0 \
+                -fobjc-arc \
+                -isysroot "$SDK_DIR" \
+                -F "$SDK_DIR/System/Library/Frameworks" \
+                -dynamiclib \
+                -o XMSpeedAd.dylib \
+                Tweak.m \
+                -Xlinker -install_name -Xlinker @rpath/XMSpeedAd.dylib
+          echo "=== Compile OK ==="
+          file XMSpeedAd.dylib
+
+      - name: Package .deb
+        run: |
+          mkdir -p _package/DEBIAN _package/Library/MobileSubstrate/DynamicLibraries
+          cp XMSpeedAd.dylib    _package/Library/MobileSubstrate/DynamicLibraries/
+          cp XMSpeedAd.plist    _package/Library/MobileSubstrate/DynamicLibraries/
+          cp control            _package/DEBIAN/control
+          chmod 755 _package/DEBIAN
+          dpkg-deb -b _package XMSpeedAd.deb
+          echo "=== Package OK ==="
 
       - uses: actions/upload-artifact@v4
         with:
           name: XMSpeedAd
-          path: packages/*.deb
+          path: XMSpeedAd.deb
